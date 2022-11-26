@@ -150,13 +150,13 @@ class DVSGesture(NeuromorphicDataset):
         self.directory = root.split(self.hdf5_name)[0]
         self.resources_local = [self.directory + "/DvsGesture.tar.gz"]
         self.resources_local_extracted = [self.directory + "/DvsGesture/"]
-        print("IS CALLED1")
+        # self.eventTransform = eventTransform()
         if ds is None:
             ds = 1
         if isinstance(ds, int):
             ds = [ds, ds]
 
-        size = [3, 128 // ds[0], 128 // ds[1]]  # 128//ds[0], 128//ds[1]
+        size = [3, 224 // ds[0], 224 // ds[1]]  # 128//ds[0], 128//ds[1]
 
         if num_steps is None:
             if self.train:
@@ -207,6 +207,12 @@ class DVSGesture(NeuromorphicDataset):
         return self.n
 
     def __getitem__(self, key):
+        
+        # print("self.train", self.train) # True
+        # print("self.transform", self.transform) #function
+        # print("self.target_transform", self.target_transform) #function
+        # print("self.return_meta", self.return_meta) # False
+        
         # Important to open and close in getitem to enable num_workers>0
         with h5py.File(self.root, "r", swmr=True, libver="latest") as f:
             if not self.train:
@@ -217,7 +223,13 @@ class DVSGesture(NeuromorphicDataset):
             )
 
         if self.transform is not None:
+            print("----------------")
+            print(data.shape)
             data = self.transform(data)
+            if np.random.random_sample() > 0.5:
+                self.eventTransform(data)
+            print(data.shape)
+
 
         if self.target_transform is not None:
             target = self.target_transform(target)
@@ -226,6 +238,12 @@ class DVSGesture(NeuromorphicDataset):
             return data, target, meta_info_light, meta_info_user
         else:
             return data, target
+
+    def eventTransform(self, data):
+        eventHide = torch.rand((1, 1, 224, 224)).repeat(16, 3, 1, 1)
+        ratioHide = np.random.randint(0, 35)/100.00
+        data[(eventHide < ratioHide)] = 0
+
 
 
 def sample(hdf5_file, key, T=500, shuffle=False, train=True):
